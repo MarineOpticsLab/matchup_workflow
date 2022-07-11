@@ -10,7 +10,7 @@ def main():
     Full path of database extracted underway file. The extraction must have had these boxes selected from the database extractor: nav + basics.''')
     
     parser.add_argument('--discreteFile', nargs=1, type=str, required=True, help='''\
-    Full path of database extracted discrete file.  The extraction must have had these boxes selected from the database extractor: bottle, bates, aiken, flowcam.''')
+    Full path of database extracted underway file.  The extraction must have had these boxes selected from the database extractor: bottle, bates, aiken, flowcam.''')
     
     parser.add_argument('--ofile', nargs=1, type=str, required=True, help='''\
     Full path and file name to save merged datafile.''')

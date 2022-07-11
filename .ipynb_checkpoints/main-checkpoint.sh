@@ -26,22 +26,23 @@ done
 ##################### Sequence Scripts ####################################################
 
 # merge field data:
-python $scriptPath/01-mergeUwDiscrete.py --uwFile $dataPath/$uwFileName --discreteFile $dataPath/$discreteFileName --ofile $dataPath/ofile01-merged-field-df.csv --gnats 2
+#python $scriptPath/01-mergeUwDiscrete.py --uwFile $dataPath/$uwFileName --discreteFile $dataPath/$discreteFileName --ofile $dataPath/ofile01-merged-field-df.csv --gnats 2
 
 # format data:
-python $scriptPath/02-datasetFormatting.py --datafile $dataPath/ofile01-merged-field-df.csv --ofile_formattedDatafile $dataPath/ofile02-formatted-field-df.csv --ofile_formattingErrorLog $dataPath/ofile03-data-formatting-error-log.csv --gnats 2 --dataType 2 --errorLUT $dataPath/errorLUT.csv
+#python $scriptPath/02-datasetFormatting.py --datafile $dataPath/ofile01-merged-field-df.csv --ofile_formattedDatafile $dataPath/ofile02-formatted-field-df.csv --ofile_formattingErrorLog $dataPath/ofile03-data-#formatting-error-log.csv --gnats 2 --dataType 2 --errorLUT $dataPath/errorLUT.csv
 
 # Produce seabass file of field data points and location:
-python $scriptPath/03-createSeabassStationList.py --fieldDf $dataPath/ofile02-formatted-field-df.csv --ofile $dataPath/ofile04-sbfile.sb
+#python $scriptPath/03-createSeabassStationList.py --fieldDf $dataPath/ofile02-formatted-field-df.csv --ofile $dataPath/ofile04-sbfile.sb
 
 # create granule files matching gnats data points to satellite granules:
-$scriptPath/04-find_granules.sh -b $dataPath/ofile04-sbfile.sb -F $dataPath/ofile05a-full-granules-with-location.csv -u $dataPath/ofile06-unique-granules.csv -s $scriptPath -f $dataPath/ofile05b-full-granules.csv
+#$scriptPath/04-find_granules.sh -b $dataPath/ofile04-sbfile.sb -F $dataPath/ofile05a-full-granules-with-location.csv -u $dataPath/ofile06-unique-granules.csv -s $scriptPath -f $dataPath/ofile05b-full-granules.csv
+#wait
 
 # Download and process satellite files
-$scriptPath/05-satproc_initialize.sh -g $dataPath/ofile06-unique-granules.csv -S $dataPath/satellite/ -p $scriptPath/pardefaults.par -s $scriptPath -c $cookieFile -t $includeSST -n $ncpus -d $dataPath
+#$scriptPath/05-satproc_initialize.sh -g $dataPath/ofile06-unique-granules.csv -S $dataPath/satellite/ -p $scriptPath/pardefaults.par -s $scriptPath -c $cookieFile -t $includeSST -n $ncpus -d $dataPath
 
 #output matchup data rows:
-$scriptPath/06-matchup_readGranLinks.sh -d $dataPath -f $dataPath/ofile02-formatted-field-df.csv -g $dataPath/ofile05b-full-granules.csv -s $scriptPath -S $dataPath/$satDir -n $ncpus
+$scriptPath/06-matchup_readGranLinks.sh -d $dataPath -f $dataPath/ofile02-formatted-field-df.csv -g $dataPath/ofile05b-full-granules.csv -s $scriptPath -S $dataPath/satellite -n $ncpus
 
 # merge matchup data rows into matchup dataframe:
 python $scriptPath/07-mergeDatarows.py --matchupDirectory $dataPath/matchups --ofile_matchupDf $dataPath/ofile08-matchup-df.csv
