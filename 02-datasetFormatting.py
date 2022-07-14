@@ -1,4 +1,4 @@
-# This script takes in a dataframe/csv, and runs a series of tests/formatting steps on it
+### This script takes in a dataframe (csv), and runs a series of tests/formatting steps on it. ###
 def main():
     
     import pandas as pd
@@ -26,63 +26,69 @@ def main():
     
     parser.add_argument('--errorLUT', nargs=1, type=str, required=False, help='''\
     File name of the error LUT that corresponds to the input dataFile. For this script to run fully without breaking, it is necessary to input an errorLUT. If this LUT does not exist yet, and this argument is not input, the script will break. It will read out an empty errorLUT csv that needs to be filled in. The script will need to be re-run.''')
-    
-#    parser.add_argument('--errorTableExists', nargs=1, type=int, required=True, help='''\
-#    Input 0 if an error Lookup Table has not yet been created.  Input 1 if the error look up table already exists.''')
-    
-#    parser.add_argument('--ofile_errorLUT', nargs=1, type=str, required=True, help='''\
-#    Filepath and name for where the errorLUT should be, or already is saved.''')
 
 
     args = parser.parse_args()
     dict_args = vars(args)
     
+    ### If we are working with an already merged datafile (datatype==2), this is a comma separated file.  However, the discrete and underway only files are text files and are tab delimited. ###
     if dict_args['dataType'][0]==2:
         df = pd.read_csv(dict_args['datafile'][0], na_values=[-999.,-99.0])
     else:
         df = pd.read_csv(dict_args['datafile'][0], sep='\t', na_values=[-999.,-99.0])
+    
     print('We are starting with a dataframe of shape:', df.shape)
 
-########## datetime formatting: ######################################################################
-# datetimes in csvs are read in as strings. Convert these to pandas datetime objects.
+############################################################# DATETIME FORMATTING: ######################################################################
+#### Datetimes in csvs are read in as strings. Convert these to pandas datetime objects. ###
 
     for element in df.columns:
         if 'yyyy-mm-ddThh:mm:ss' in element:
             df[element] = pd.to_datetime(df[element])
             
    
-    if ((dict_args['dataType'][0]==0)|(dict_args['dataType'][0]==1)): #for datatype==2 (merged data) these steps were already done in the merge script:
+    ### For underway or discrete only files, perform formatting that was already done on the merged data frame in script 01. ###
+    if ((dict_args['dataType'][0]==0)|(dict_args['dataType'][0]==1)):
         df.sort_values(by='yyyy-mm-ddThh:mm:ss', inplace=True, ignore_index=True)
         df = dropDuplicateDatetimeRows(df, 'yyyy-mm-ddThh:mm:ss')
         
-        #Eliminate whitespace from uw cruise column for gnats entries
+        ### Eliminate whitespace from uw cruise column for gnats entries. ###
         if dict_args['gnats'][0]==2:
             df['Cruise'] = [element[-8:] for element in df['Cruise']]
             df = cruiseDatetimeAgreement(df, 'Cruise', 'yyyy-mm-ddThh:mm:ss')
         if dict_args['gnats'][0]==1:
             df['Cruise'] = [element[-8:] if all([element[-8]=='s', element[-1] in ['e','w']]) else element for element in df['Cruise']]            
             
-############# general formatting ################################################################
+########################################### GENERAL FORMATTING ################################################################
+    
+    ### Replace Whitespace in column names with underscores. ###
     df.rename(columns=dict(zip(df.columns, [element.replace(' ','_') for element in df.columns])), inplace=True) #replace whitespace with underscores
-    #drop known, unwanted columns:
+    
+    ### Drop known, unwanted columns. ###
     for element in df.columns:
         if element in ['UWTime','UWLatitude','UWLongitude','Latitude[Degrees_East]',
                        'Longitude[Degrees_North]','Temperature[Deg_C]']:
             df.drop(columns=element, inplace=True)
-    if dict_args['dataType'][0]==1: #if discrete file, drop the uw specific columns
-        df.drop(columns=['Salinity[PSU]','bbtot470[1/m]','bbtot532[1/m]','bbtot532Std[1/m]','bbtot676[1/m]','bbacid[1/m]','bbacidStd[1/m]','bbprime[1/m]','bbprimeStd[1/m]','numSamples','ChlCalibrated[mg/m^3]','ChlFluorometer[Factory_calibration_as_mg/m^3]','CDOMfluorometer[QSDE_as_ppb]', 'Unnamed:_161'], inplace=True)
-    #drop other columns and rows that may have slipped through the cracks:    
-    df.drop_duplicates(ignore_index=True, inplace=True) #drops duplicate rows
-    dropDuplicateColumns(df) #drop identical columns (by value) that have the same name
-    df.dropna(axis=0, how='all', inplace=True) #drop nanrows
-    #df.dropna(axis=1, how='all', inplace=True) #drop nan columns ##############*************************$$$$$$$$$$$$$$$$$$$ SRP 05/6/22 testing
     
-    # later on in the workflow, in find_matchup.py, if the seabass file contains nans in either of the lat or longitude columns, the script throws an error, and the processing breaks. Therefore, here, I am counter acting that by eliminating any field data points that have any null values in their lats/lons.
+    ### If we are working with the discrete only file, drop the columns that overlap with the underway file. This has already been done for the merged dataframe in script 01. ###
+    if dict_args['dataType'][0]==1:
+        df.drop(columns=['Salinity[PSU]','bbtot470[1/m]','bbtot532[1/m]','bbtot532Std[1/m]','bbtot676[1/m]','bbacid[1/m]','bbacidStd[1/m]','bbprime[1/m]','bbprimeStd[1/m]','numSamples','ChlCalibrated[mg/m^3]','ChlFluorometer[Factory_calibration_as_mg/m^3]','CDOMfluorometer[QSDE_as_ppb]', 'Unnamed:_161'], inplace=True)
+    
+    ### Drop duplicate rows: ### 
+    df.drop_duplicates(ignore_index=True, inplace=True)
+    
+    ### Drop columns that contain identical values but have are named differently. ###
+    dropDuplicateColumns(df)
+    
+    ### Drop Nan-Rows. ###
+    df.dropna(axis=0, how='all', inplace=True)
+    
+    ### Later on in the workflow, in find_matchup.py, if the seabass file contains nans in either of the lat or longitude columns, the script throws an error, and the processing breaks. Therefore, here, I am counter acting that by eliminating any field data points that have any null values in their lats/lons. ###
     df  = df.loc[(df.Latitude_uw.isnull()==False)&(df.Longitude_uw.isnull()==False)]
     
-    
     print('done with general formatting')
-################ Detect and Nullify Gross Errors due to Formatting ########################
+    
+########################################## DETECT AND NULLIFY GROSS ERRORS DUE TO FORMATTING ISSUES #############################################################
 
     formatErrorsRecord = []
     for column in df.columns[:]:
@@ -91,17 +97,22 @@ def main():
         else:
             formatErrors_idx = []
             originalValues = []
-            # if dtype==object and all non-nan elements are string, call stringCheck
+            
+            ### If dtype==object and all non-nan elements are string, call stringCheck. ###
             if df[column].dtype=='object':
                 if all([type(element)==str for element in df[column].loc[df[column].isnull()==False]]): #if all non-nan elements are strings:
                     idx, vals = stringCheck(df[column])
                     formatErrors_idx.append(idx)
                     originalValues.append([str(element)+'_stringCheck' for element in vals])
-                else: #if dtype==object but not all non-nan elements are string, call typeCheck
+                
+                ### If dtype==object but not all non-nan elements are string, call typeCheck. ###
+                else: 
                     idx, vals = typeCheck(df[column])
                     formatErrors_idx.append(idx)
                     originalValues.append([str(element)+'_typeCheck' for element in vals])
-            elif ((df[column].dtype==float)|(df[column].dtype==int)): #if dtype is either float or integer, call signCheck and orderMagnitudeCheck
+            
+            ### If dtype is either float or integer, call signCheck and orderMagnitudeCheck. ###
+            elif ((df[column].dtype==float)|(df[column].dtype==int)):
                 idx, vals = signCheck(df[column])
                 formatErrors_idx.append(idx)
                 originalValues.append([str(element)+'_signCheck' for element in vals])
@@ -126,10 +137,11 @@ def main():
     formatErrorsDataframe.to_csv(dict_args['ofile_formattingErrorLog'][0], index=True)
     print('done with errors due to formatting issues')
     
-##NOTE: In the error section just above, I needed to utilize a dictionary, or else for underway only data, an error was thrown about duplicate axis..what happened was that a few indices triggered multiple checks..ie both a magnitude check and a sign check. There for in my combined idx array, I had a few repeated values. A series could not be made on an index with duplicate values.###        
+##NOTE: In the error section just above, I needed to utilize a dictionary, or else for underway only data, an error was thrown about duplicate axis..what happened was that a few indices triggered multiple checks..ie both a magnitude check and a sign check. Therefore in my combined idx array, I had a few repeated values. A series could not be made on an index with duplicate values.###        
     
-################## New Error LUT procedure SRP 04/20/2020 ###################################
+########################################## ERROR LOOKUP TABLE ############################################################
 
+    ### If an error LUT does not exist, read out the column names to a csv file that can be filled in with error values, and then read back into this script when this script is re-run. ###
     if 'errorLUT' not in dict_args:
         cols = pd.Series(df.columns, name='Variable')
         err_abs = pd.Series(data=None, name='Error_Absolute')
@@ -137,23 +149,9 @@ def main():
         error_df = pd.concat([cols, err_abs, err_per], axis=1)
         error_df.to_csv('empty_'+dict_args['errorLUT'][0], index=False)
         print('To proceed with this script, it is necessary to fill in the error LUT output to: empty_' + dict_args['errorLUT'][0] +' . If error values are unknown, leave cells blank.  Once the error LUT is filled in, re-run this script.')
-    
-    error_df = pd.read_csv(dict_args['errorLUT'][0])
-    
-    
-################ READ IN ERROR TABLE AND CREATE ERROR COLUMNS ########################
-## This bit is clunky.  This script requires two input variables: errorTableExists, and ofile_errorLUT.  If the error Table does not exist, the script stops because it reads out an empty error table to be filled in, and throws an error.  Then the script needs to be re-run from the start once an error table is present.  If the error table is present from the beginning, then the script runs smoothly.
-
-#    if dict_args['errorTableExists'][0]==0:
-#        cols = pd.Series(df.columns, name='Variable')
-#        err_abs = pd.Series(data=None, name='Error_Absolute')
-#        err_per = pd.Series(data=None, name='Error_Percent')
-#        error_df = pd.concat([cols, err_abs, err_per], axis=1)
-#        error_df.to_csv(dict_args['ofile_errorLUT'][0], index=False)
-#        print('To proceed with this script, it is necessary to fill in the error LUT output to:' + #dict_args['ofile_errorLUT'][0] +' . If error values are unknown, leave cells blank.  Once the error #LUT is filled in, re-run this script.')
         
-#    if dict_args['errorTableExists'][0]==1:
-#        error_df = pd.read_csv(dict_args['ofile_errorLUT'][0])'''
+    ### If the error LUT does exist, read in the error and calculate and store error columns for each variable. ###
+    error_df = pd.read_csv(dict_args['errorLUT'][0])
 
     err_abs = error_df.loc[error_df['Error_Absolute'].isnull()==False, ['Variable','Error_Absolute']]
     err_percent = error_df.loc[error_df['Error_Percent'].isnull()==False, ['Variable','Error_Percent']]
@@ -172,23 +170,23 @@ def main():
         idx = df.columns.get_loc(variable)+1
         df.insert(idx, err_col_name, err_col_vals)
         
-
     print('Done with creating and filling in error columns')
-#################### Calculate Discrete and Underway Specific Columns. Include Error Propagation. #####################################
+    
+########################## CALCULATE DISCRETE AND UNDERWAY SPECIFIC COLUMNS. INCLUDE ERROR PROPAGATION. #####################################################
 
-    if ((dict_args['dataType'][0]==1)|(dict_args['dataType'][0]==2)): #if the datafile contains discrete data
+    ### If the data file contains discrete data, convert PIC into units of mol/m3. Calculate corresponding error. ###
+    if ((dict_args['dataType'][0]==1)|(dict_args['dataType'][0]==2)):
         df.insert(df.columns.get_loc('PIC[ug/l]')+1, 'PIC[mol/m3]_d', [element*(0.001/12) for element in df['PIC[ug/l]']])
         df.insert(df.columns.get_loc('PIC[ug/l]_err')+1, 'PIC[mol/m3]_d_err', [element*0.06*(0.001/12)/element for element in df['PIC[ug/l]']]) #multiplying and dividing by element is effectively multiplying by 1, but it means if element=nan, then error=nan
         df.drop(columns=['PIC[ug/l]','PIC[ug/l]_err'], inplace=True)
         
-
-    if ((dict_args['dataType'][0]==0)|(dict_args['dataType'][0]==2)): #if the datafile contains underway data
+    ### If the data file contains underway data, calculate underway PIC from bbprime and bbstar. Note that this formula needs to be updated as the satellite algorithms are updated with new bbstars. ###
+    if ((dict_args['dataType'][0]==0)|(dict_args['dataType'][0]==2)):
         print('Calculating UW PIC based on bbprime and bbstar.  Note, this script currently uses static bbstar = 1.628.  If new satellite files are downloaded and bbstar is updated, this script will need to be updated.')
         df.insert(df.columns.get_loc('bbprimeStd[1/m]')+1, 'PIC[mol/m3]_uw', df['bbprime[1/m]']/1.628)
         df.insert(df.columns.get_loc('bbprimeStd[1/m]')+2, 'PIC[mol/m3]_uw_err', df['bbprimeStd[1/m]']/1.628)
         
-        ########  RRS columns for underway data #################################
-        
+        ### Calculate RRS columns for underway data. ###
         wavelengths = [412,441,490,510,555,671,684]
         rho = 0.028
         i = df.columns.get_loc('es684[uW/cm^2/nm]')+1
@@ -209,9 +207,10 @@ def main():
             df.insert(i, name, Rrs)
             df.insert(i+1, name_sd, Rrs_sd)
             i = i+2
-################################ Check for consistency of null values between variable columns and corresponding error columns.################################
-# set error columns to null if variable columns are null for that index
+            
+################################ CHECK FOR NULL VALUES CONSISTENCY BETWEEN VARIABLE AND CORRESPONDING ERROR COLUMNS. #############################################
 
+### Set error columns to null if variable columns are null for that index. ###
     err_cols = []
     var_cols = []
     std_cols = []
@@ -229,21 +228,23 @@ def main():
     for std,var in zip(std_cols, var_std_cols):
         df.loc[df[var].isnull()==True, std] = np.nan            
             
- ###################### ORGANIZE COLUMNS #############################################
-    if dict_args['dataType'][0]==2: #if the datafile is a merged uw and discrete data file:      
+ ###################################################### ORGANIZE COLUMNS ############################################################################
+    
+    ### If the data file is a merged underway and discrete file, organize with ID columns to the left and variable columns to the right. ###
+    if dict_args['dataType'][0]==2:     
         id_cols = ['Cruise_uw','Station_uw','yyyy-mm-ddThh:mm:ss_uw','Longitude_uw','Latitude_uw','Cruise_d','Station_d',
            'yyyy-mm-ddThh:mm:ss_d','Longitude_d','Latitude_d','Type']
         other_cols = [element for element in df.columns if element not in id_cols]
         organized_cols = id_cols + other_cols
         df = df[organized_cols]
         
-        #eliminate unmatched discrete entries (discrete data points with no underway within 5 minutes)
+        #### Eliminate unmatched discrete entries (discrete data points with no underway within 5 minutes). ###
         print('Note that there are 33 discrete data points with no matching underway stations within 5 minutes.  We have decided to eliminate these data points, as in order to merge the field data with the satellite data, we merge on ID = cruise_stationUW.  Without an underway station number, it is impossible to merge using the current structure.  This should be revisited later.  Comment out the next command if it is decided to include these unmatched discrete datapoints.')
         #df = df.loc[~((df['Station_uw'].isnull()==True)&(df['Station_d'].isnull()==False))]
         df = df.loc[df['Station_uw'].isnull()==False]
         df['Station_uw'] = [int(element) for element in df['Station_uw']]
         
-  ############### Create an ID column that will be used to merge field data with satellite data #####################
+  ### For Underway only and merged field data, create an ID column that will be used to merge field data with satellite data.
         # Note, this is done with UW ids.  If we only have discrete data, we will need to find a new way to merge the field data with the satellite data.
     if dict_args['dataType'][0]==0:
         df.insert(0, 'ID', [str(cruise)+'_'+str(station) for cruise, station in zip(df['Cruise'],df['Station'])])
@@ -275,7 +276,7 @@ def cruiseDatetimeAgreement(dataframe, cruiseColumnName, datetimeColumnName): #o
     dataframe[datetimeColumnName] = pd.to_datetime(dataframe[datetimeColumnName])
        
     for i in dataframe.index:
-        if dataframe[cruiseColumnName][i][1:3]!=str(dataframe[datetimeColumnName][i].year)[-2:]: #if the cruise name year and the datetime year don't agree, drop the row
+        if dataframe[cruiseColumnName][i][1:3]!=str(dataframe[datetimeColumnName][i].year)[-2:]: #if the cruise name year and the datetime year don't agree (for gnats cruises), drop the row
             dataframe.drop(index=i, inplace=True)
     dataframe.reset_index(drop=True, inplace=True)
     return dataframe
@@ -296,6 +297,7 @@ def dropDuplicateColumns(df):
 ############################# Formatting Error Functions ########################################
 
 #call the following funciton if column.dtype==object
+# typeCheck checks for consistency of object type within a column. If a cell contains a value of a type that is inconsistent with the majority of the types within the same column, that cell is nullified and recorded in the formatting errors log. 
 def typeCheck(column): #check to make sure all cells agree with type, aside from nans; floats and ints may be interchangeable
     #Note: Nans do not affect column dtype
     import numpy as np
@@ -347,8 +349,10 @@ def typeCheck(column): #check to make sure all cells agree with type, aside from
                     values.append(column[i])
             column.iloc[idx] = np.nan
             return idx, values
-    
-def signCheck(column):  #call this function if type is float or integer ## checks to see neg/pos sign of individual cells match the rest of the column
+
+### Call signCheck if type is float or integer. ###
+### signCheck checks to see if the sign (negative or positive) of individual cells is consisten with the rest of the column. ###
+def signCheck(column):
     import numpy as np
     import pandas as pd
     
@@ -372,8 +376,7 @@ def signCheck(column):  #call this function if type is float or integer ## check
         return [],[]    
 
 
-#The following function checks to see that if expected, all elements will have the same number of characters, and that they have the same first and last characters, again, if expected, with expectation being defined as >98% of the entries are of uniform string formatting.
-
+# stringCheck checks to see if there is a majority in formatting of string values in a column, that the formatting of strings of all individual cells agree with the majority. Specifically, it checks for consistency in the length of the string, and in the first and last characters of the string. This is formatted specifically with gnats cruise names in mind, which should be formatted as 's########w'.
 def stringCheck(column):
     import numpy as np
     import pandas as pd
@@ -390,7 +393,7 @@ def stringCheck(column):
     idx = []
     vals = []
     
-    if max_occurrences > 0.98*len(col_na): #if there is >98% majority
+    if max_occurrences > 0.98*len(col_na): #if there is >98% majority in the length of the strings in a column
         i=0
         for i in idx_na:
             if len(column[i])!=majority_num_characters:
@@ -403,7 +406,7 @@ def stringCheck(column):
     max_first_char_counts = max(first_char_counts)
     majority_first_char = uq_first_char[first_char_counts.index(max_first_char_counts)]
     
-    if max_first_char_counts > 0.98*len(col_na):
+    if max_first_char_counts > 0.98*len(col_na): #if there is >98% majority in the consistency of the first character of the strings in a column
         for i in idx_na:
             if column[i][0]!=majority_first_char:
                 idx.append(i)
@@ -415,7 +418,7 @@ def stringCheck(column):
     max_last_char_counts = max(last_char_counts)
     majority_last_char = uq_last_char[last_char_counts.index(max_last_char_counts)]
     
-    if max_last_char_counts > 0.98*len(col_na):
+    if max_last_char_counts > 0.98*len(col_na): #if there is >98% majority in the consistency of the last character of the strings in a column
         i=0
         for i in idx_na:
             if column[i][-1]!=majority_last_char:
@@ -428,7 +431,7 @@ def stringCheck(column):
 
 
 # The next function checks the expected order of magnitude based on 98% or more agreement in the data.  If a data point has a different order of magnitude, and falls outside of boxplot whiskers, it is flagged and nullified.
-## The following functions bothers me because it is on the verge of formatting error detection to normal outlier detection.  The function was written to capture errors due to digits being cut off from cycle sampling stops and starts.
+## The following function is similar to normal outlier detection.  The function was written to capture errors due to digits being cut off from cycle sampling stops and starts. It was meant to catch numerical outliers due to formatting issues, not due to 'normal' outlier issues.
 
 def orderMagnitudeCheck(column):
     import numpy as np
@@ -449,7 +452,7 @@ def orderMagnitudeCheck(column):
 
         order = [math.floor(math.log10(abs(element))) for element in column[idx_na_zero]] #gives order of magnitude
         uq_order = np.unique(order)
-        counts = [order.count(element) for element in uq_order] #how many occurrences of each OofM
+        counts = [order.count(element) for element in uq_order] #how many occurrences of each order of magnitude
         max_count = max(counts)
         majority_order = uq_order[counts.index(max_count)]
 

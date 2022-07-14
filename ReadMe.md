@@ -11,6 +11,8 @@
 * make sure ncpus agree in the three locations: submission, scripts 05 and 06
 
 
+**The full workflow does not currently work on discrete only data matched to satellite data, because in script 02, we create an id column based on underway ids. We have no ids with which to matchup discrete data with satellite data.**
+
 ### Inputs:
 
 ### Outputs:
@@ -50,7 +52,9 @@ Note that CMR only contains L2 files. We use this script to find the L2 file gra
 **05-satproc_initialize.sh:** This script reads in a text file with seawifs, modis, and viirs download urls.  It calls on one of three satellite-specific processing scripts that download the satellite granules via wget into a specific satellite directory structure. A par file is required that specifies which products to download, at which resolution.  This script is also set up to download sst if specified. Thus the script requires two par files: one including sst, one excluding sst. Furthermore, the script requires a cookies file containing the user's earth data login credentials. See _____________ for more information on setting up this cookie file. This script also forks the workflow so that multiple satellite files can be downloaded at once. 
 
 **05a-modis-workflow.sh:**
+
 **05b-seawifs-workflow.sh:**  
+
 **05c-viirs-workflow.sh:** 
 These three scripts take in an L1a download url, use wget to download the L1a file, process the L1a file to L1b, and the L1b to L2.  Output is sent to an output log rather than written interactively in the terminal.
 
@@ -58,7 +62,7 @@ These three scripts take in an L1a download url, use wget to download the L1a fi
 
 **06a-matchup_outputDatarows.py:** This script takes in a field id and its matching granule id, as well as it reads in the field dataframe. It selects out the field data from the field dataframe associated with the field id.  It imports the satellite file from the granule id.  It performs a great circle distance check. Up until now, the field id and granule id are matched by a 6 hour time window. In this script, if the great circle distance between the field data point and the nearest satellite pixel in the granule is less than 1 km, the processing continues. Otherwise, the matchup is recorded in an excluded matchup log, and processing moves on to the next matchup.  For matchups within 1 km, this script selects a 5x5 pixel grid around the nearest matchup pixel. It calculates statistics (mean, median, stdev, etc) from the pixel grid for each satellite product.  It merges the field data with the pixel grid statistics, and outputs this 'matchup datarow' into it's own csv saved into a matchup directory.
 
-**07-mergeDatarows.py:** This script reads in all matchups single row csvs saved in the matchup directory and assembles a unified matchup dataframe.  This script uses pd.concat to assemble the rows together. Concatenation is a slow and heavy memory usage process.  This script takes upwards of 12 hours to run.
+**07-mergeDatarows.py:** This script reads in all matchup single row csvs saved in the matchup directory and assembles a unified matchup dataframe.  This script uses pd.concat to assemble the rows together. Concatenation is a slow and heavy memory usage process.  This script takes upwards of 12 hours to run.
 
 **08-groupWaveBands.py:** This script reads in the matchup dataframe, which contains matchups for seawifs, viirs, and modis.  Seawifs, Viirs, and Modis record data at slightly different wavelengths. This script groups the wavelengths (for each product) into 10 color bands by taking the mean of the data that is grouped and saves out a new dataframe with color bands included.
 
