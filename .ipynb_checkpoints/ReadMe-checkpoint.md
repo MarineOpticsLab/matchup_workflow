@@ -1,19 +1,78 @@
-### Matchup Workflow Setup:
+# Matchup Workflow:
 
-* include data directory structure
-* ocssw env .yml file
-* update luts beforehand
-* error look-up-table
+## Pre-Processing Setup:
 
+### Directory Structure:
 
-### Processing:
+* Requires 2 directories: a script directory, and a data directory.
 
-* make sure ncpus agree in the three locations: submission, scripts 05 and 06
+1) **Script Directory** must include:
 
+* Scripts 00 - 09 with all associated subscripts (a,b,c)
+* pardefaults file(s)
+* SB_support.py file (can be downloaded at https://seabass.gsfc.nasa.gov/wiki/readsb_python)
 
-**The full workflow does not currently work on discrete only data matched to satellite data, because in script 02, we create an id column based on underway ids. We have no ids with which to matchup discrete data with satellite data.**
+2) **Data Directory** must include:
 
-### Inputs:
+* Field data file that is one of the following:
+    * underway file
+    * discrete file
+    * underway and discrete files
+    * merged underway and discrete file
+* Error Look-up Table
+    * note that an error lut is necessary for the full workflow to finish. If no table is provided at the beginning, the workflow will break at script 02. An empty error lut will be output, and this will need to be filled in with appropriate errors for the workflow to proceed past script 02 when re-submitted.
+ 
+### Other:
+
+* Python Environment:
+    * This workflow utilizes the environment and packages specified in matchup-workflow-environment.yml. This environment was created and run on a linux machine.
+    * To load the environment, enter the following commands at the terminal:
+        * conda env create -f /path/to/env/file/filename-environment.yml
+        * conda activate ocssw_env
+        * For more detailed description: https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
+
+* EarthData login cookies file:
+    * This matchup workflow downloads satellite files from CMR. This requires an earthdata account and a cookies file that contains the user's earthdata login credentials. For description on setting up this file, refer to section 2.2 of: 
+    * /matchup-workflow/setup/Charlie-Guide.md 
+
+* Update ocssw satellite look-up tables:
+    * To achieve the highest percentage of successful satellite file downloads, update the associated look-up tables before running the matchup workflow.
+    * After the ocssw environment has been activated, in the terminal, enter the following commands:
+        * update_luts seawifs
+        * update_luts viirsn
+        * update_luts modisa
+        * update_luts modist
+        
+
+## Processing Notes:
+
+**Time Required:**
+* Run on the gnatsat data, this full workflow takes about 96 hours with ncpus=40 and mem=128gb. 
+* Scripts 04, 05, and 07, are the most time intensive. 
+* Forking and NCPUS: the ncpus are now linked throughout three different scripts (00, 05, and 06). NCPUS is given as an input to main, and remains the same for all three scripts. However, if the workflow is partitioned into separate chunks, it is important to remember that the number of cpus in scripts 05 and 06 must be less than or equal to the number given in the submission script. If not, the workflow will break without any errors, which is particularly difficult to diagnose.
+
+**Discrete Only Input Scenario:**
+* The full workflow does not currently work on discrete only data matched to satellite data, because in script 02, we create an id column based on underway ids. We currently have no ids/id scheme with which to matchup discrete data with satellite data.**
+
+## Input and Output Files:
+
+**Input Files:**
+* uw-file.txt: underway extraction from the GNATS database with only nav + basics selected.
+* discrete-file.txt: discrete extraction from the GNATS database with bottle, bates, aiken, and flowcam selected.
+* errorLUT.csv: csv containing all field variables and the absolute or percent error associate with each variable.
+
+**Output Files:**
+* ofile01-merged-field-df: uw and discrete data merged based on nearest time within a five minute time tolerance.
+* ofile02-formatted-field-df: merged field data with formatting errors from database corrected/nullified.
+* ofile03-data-formatting-error-log: a record of data points nullified due to formatting errors. Also records the reason each data point was nullified.
+* ofile04-sbfile: field data formatted in seabass style formatting so that the field data can be input into script 05 to find matching satellite granules.
+* ofile05a-full-granules-with-location: csv containing satellite L1a granule urls matched to field ids. Later fed as input to 04b-editurls.py.
+* ofile05b-full-granules: version of 05a, containing satellite L2 granule urls matched to field ids. Later fed into 06-matchup_readGranLinks to match each field data point with its corresponding satellite data.
+* ofile06-unique-granules: version of 05b, containing only the unique subset of L2 granules. Fed into 05-satproc_intialize to download unique granules.
+* ofile07-excluded-matchup-log: record of matchups that were excluded due to file import errors or due to matchups being greater than 1km away from the corresponding field data point.
+* ofile08-matchup-df: csv of merged field and satellite data.
+* ofile09-matchup-df-with-color-bands: version of ofile08 where wavelengths from different sensors have been grouped into 10 color bands.
+* ofile10-gnatsat-v1: version of ofile09, where all field data points mapping to the same pixel in the same satellite granule have been averaged.
 
 ### Outputs:
 
