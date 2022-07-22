@@ -29,6 +29,7 @@ Additionally, this script addresses some formatting issues that needed to be cor
 * checks for consistency with the type of cell values within a column
 * checks for consistency in positive and negative signs
 * checks for consistency in order of magnitude of entries in column
+
 ** if any of these checks do not check out, then the value is nullified, and the value, its dataframe location, and the check that tripped is recorded in an output error record file.
 
 After gross outliers are nullified, error columns utilizing the error LUT are calculated and saved within the dataframe.
@@ -56,6 +57,7 @@ Note that CMR only contains L2 files. We use this script to find the L2 file gra
 **05b-seawifs-workflow.sh:**  
 
 **05c-viirs-workflow.sh:** 
+
 These three scripts take in an L1a download url, use wget to download the L1a file, process the L1a file to L1b, and the L1b to L2.  Output is sent to an output log rather than written interactively in the terminal.
 
 **06-matchup_readGranLinks.sh:** This script reads in the full-granules file output from script 04, which contains the field ID, the granule ID, and the granule download url.  For each field to satellite matchup, it feeds the field id and granule id into 06a-matchup_outputDatarows.py. It forks the process so that 06a-matchup_outputDatarows.py processes multiple matchups at once.

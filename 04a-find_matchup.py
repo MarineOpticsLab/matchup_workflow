@@ -25,6 +25,14 @@ than my modified one. I just wanted to make the minimal amount of edits to
 the `find_matchup.py` file, rather than slim it down to only the essentials 
 for my usage, so if there are updates to the file by NASA in the future, 
 then it's not as big a rewrite for me.
+
+Modified by Sunny Pinkham on 2022/07/01:
+1) Modified dict_plat structure.  dict_plat['platform'] now contains a list, 
+rather than a single value (even if it is a list of only 1 element long).  
+This was necessary for the VIIRS workflow. Prior to 2018, in CMR, the VIIRS
+platform is tagged as 'NPP'. Post January 2018, VIIRS platform is tagged as 
+'Suomi-NPP'.  It is necessary to include both platforms in order to attain 
+Viirs matchups across 2017/2018. 
 """
 
 def main():

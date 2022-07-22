@@ -1,3 +1,17 @@
+## This script groups the various wavelengths measured by the four satellites in gnatsat (seawifs,
+## viirs, aqua, and terra) into 10 color bands. It reports the nanmean of the grouped wavelengths measurements.
+##
+## b01: 410,412
+## b02: 443
+## b03: 469
+## b04: 486, 488, 490
+## b05: 510
+## b06: 531
+## b07: 547, 551, 555
+## b08: 645
+## b09: 667, 670, 671
+## b10: 678
+
 def main():
     
     import pandas as pd

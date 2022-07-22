@@ -1,3 +1,7 @@
+## This is a script that is specific to creating the gnatsat dataset.
+## It averages (mean) and propagates the error of the field data that map to one satellite pixel.
+## It organizes the columns. Left: Id columns. Middle: field columns. Right: satellite columns.
+
 def main():
     
     import pandas as pd

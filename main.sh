@@ -23,13 +23,27 @@ do
     esac
 done
 
+#################### Set up Required Directory Structure ################################## SRP Added this (following) block in on 07/22/22; Block of code has not been tested yet.
+
+if [ ! -d $dataPath/logs ]
+then mkdir $dataPath/logs
+fi
+
+if [ ! -d $dataPath/satellite ]
+then mkdir $dataPath/satellite
+fi
+
+if [ ! -d $dataPath/matchups ]
+then mkdir $dataPath/matchups
+fi
+
 ##################### Sequence Scripts ####################################################
 
 # merge field data:
 python $scriptPath/01-mergeUwDiscrete.py --uwFile $dataPath/$uwFileName --discreteFile $dataPath/$discreteFileName --ofile $dataPath/ofile01-merged-field-df.csv --gnats 2
 
 # format data:
-python $scriptPath/02-datasetFormatting.py --datafile $dataPath/ofile01-merged-field-df.csv --ofile_formattedDatafile $dataPath/ofile02-formatted-field-df.csv --ofile_formattingErrorLog $dataPath/ofile03-data-#formatting-error-log.csv --gnats 2 --dataType 2 --errorLUT $dataPath/errorLUT.csv
+python $scriptPath/02-datasetFormatting.py --datafile $dataPath/ofile01-merged-field-df.csv --ofile_formattedDatafile $dataPath/ofile02-formatted-field-df.csv --ofile_formattingErrorLog $dataPath/ofile03-data-formatting-error-log.csv --gnats 2 --dataType 2 --errorLUT $dataPath/errorLUT.csv
 
 # Produce seabass file of field data points and location:
 python $scriptPath/03-createSeabassStationList.py --fieldDf $dataPath/ofile02-formatted-field-df.csv --ofile $dataPath/ofile04-sbfile.sb

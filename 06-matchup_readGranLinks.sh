@@ -1,3 +1,9 @@
+## This script reads in the full granules files (of L2 urls). It sends each granule id within this
+# file, line by line, as input to 06a-matchup_outputDatarows.py.  Script 06a uses the information 
+# in the full granules file to read in the field dataframe, read in the satellite granules, and 
+# match each field data point with its corresponding satellite data. It outputs a single row csv
+# containing both field and satellite data for each matchup.
+
 ##!/bin/bash
 
 ##########################################################################################

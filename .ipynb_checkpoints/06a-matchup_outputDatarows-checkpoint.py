@@ -1,3 +1,8 @@
+##This script uses the info in the full granules file to read in the field data and the satellite data.
+## For a single matchup, it combines the field data with the corresponding satellite data in a single row.
+## Each matchup is output to a single line csv.
+## Additionally, for the satellite data, 'pixel grid statistics' are calculated.  A 5x5 grid is drawn around the pixel that nearest matches the field data point by location. The mean, median, standard deviation, and filtered mean and filtered median are reported for the 25 pixels in the grid.
+
 def main():
 
     import xarray as xr

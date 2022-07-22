@@ -2,10 +2,13 @@
 
 # This script is for downloading and processing satellite files
 # with ocean color products AND SST specified in a par file.
-# NOTE: we can't get SST for SeaWiFS (and JPSS through ocssw code)
-# so a separate par file needs to be submitted for it. This script
-# assumes that par file is named the same as the MODIS / VIIRS file
-# but with a _seawifs suffix e.g. pardefaults_seawifs.par
+# NOTE: we can't get SST for SeaWiFS (and JPSS through ocssw code),
+# therefore we use two par files. pardefaults.par is for Seawifs only,
+# where include_sst = 0.  pardefaults_sst.par is for Modis and viirs, 
+# where includes_sst = 1. The default par file in this script is par
+# without sst. This script assumes that par with sst is named the same,
+# only including the suffix '_sst'. 
+# 
 #
 # Specifically, this script:
 # 1) reads a text file with seawifs, modis and viirs download urls

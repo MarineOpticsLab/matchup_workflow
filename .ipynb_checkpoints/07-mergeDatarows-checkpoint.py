@@ -1,3 +1,6 @@
+## This script reads in the individual matchup datarows and concats these rows into a single dataframe.
+## Note that pd.concat is a memory intensive operation. This script will take upwards of 12 hours to run on the thousands of matchups making up the gnatsat dataframe.
+
 def main():
 
     import pandas as pd
