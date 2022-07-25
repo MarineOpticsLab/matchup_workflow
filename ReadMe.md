@@ -80,9 +80,9 @@
 
 ## Scripts:
 
-**01-mergeUwDiscrete.py:** This is a GNATS specific script.  It takes in a database extracted underway file, and a database extracted discrete file.  It merges the discrete and underway data based on nearest time within a 5 minute time tolerance. It outputs a merged field dataframe.
+**01-mergeUwDiscrete.py:** This script takes in a database extracted underway file, and a database extracted discrete file.  It merges the discrete and underway data based on nearest time within a 5 minute time tolerance. It outputs a merged field dataframe.
 
-Additionally, this script addresses some formatting issues that needed to be corrected before the merge. These issues still should be corrected within the GNATS database itself. The issues corrected include: inconsistent whitespace in the underway cruise column, bbprime std dev not calculated for many years, Lt and Li radiometry columns were swapped for a handful of cruises, half of the discrete dataset depths were set to zero and half to null, discrete column HPLC was incorrectly labeled as HLPC, some of the cruise names did not agree with the corresponding datetimes, there were a handful of duplicated datetime entries.
+Additionally, this script addresses some formatting issues that needed to be corrected before the merge. These issues still should be corrected within the database itself. The issues corrected include: inconsistent whitespace in the underway cruise column, bbprime std dev not calculated for many years, Lt and Li radiometry columns were swapped for a handful of cruises, half of the discrete dataset depths were set to zero and half to null, discrete column HPLC was incorrectly labeled as HLPC, some of the cruise names did not agree with the corresponding datetimes, there were a handful of duplicated datetime entries.
 
 **02-datasetFormatting.py:** This script is set up to take as input either an underway file, a discrete file, or a merged file. It has only been tested on the merged file. This script also requires as input an error lut that defines the error for each column of the input dataframe. If an error lut is not input, the script will break but output a table that needs to be filled in with errors. This script performs a number of formatting checks, and identifies gross outliers due to typos:
 * drops rows with nan values in the latitude and longitude columns (essenial for find_matchup.py to work)
@@ -91,7 +91,7 @@ Additionally, this script addresses some formatting issues that needed to be cor
 * checks for consistency in positive and negative signs
 * checks for consistency in order of magnitude of entries in column
 
-** if any of these checks do not check out, then the value is nullified, and the value, its dataframe location, and the check that tripped is recorded in an output error record file.
+** If any of these checks do not check out, then the value is nullified, and the value, its dataframe location, and the check that tripped is recorded in an output error record file.
 
 After gross outliers are nullified, error columns utilizing the error LUT are calculated and saved within the dataframe.
 
