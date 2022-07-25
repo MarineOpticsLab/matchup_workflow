@@ -28,6 +28,7 @@
     * This workflow utilizes the environment and packages specified in matchup-workflow-environment.yml. This environment was created and run on a linux machine.
     * To load the environment, enter the following commands at the terminal:
         * conda env create -f /path/to/env/file/filename-environment.yml
+            * current path: /matchup-workflow/setup/matchup-workflow-environment.yml
         * conda activate ocssw_env
         * For more detailed description: https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
 
@@ -47,7 +48,8 @@
 ## Processing Notes:
 
 **Time Required:**
-* Run on the gnatsat data, this full workflow takes about 96 hours with ncpus=40 and mem=128gb. 
+* When run on the gnatsat data, this full workflow takes about 96 hours with ncpus=40 and mem=128gb. 
+    * gnatsat attempts to download 1657 unique satellite granules. It matches these granules to 325721 field data points.
 * Scripts 04, 05, and 07, are the most time intensive. 
 * Forking and NCPUS: 
     * The ncpus are now linked throughout three different scripts (00, 05, and 06). NCPUS is given as an input to main, and remains the same for all three scripts. However, if the workflow is partitioned into separate chunks, it is important to remember that the number of cpus in scripts 05 and 06 must be less than or equal to the number given in the submission script. If not, the workflow will break without any errors, which is particularly difficult to diagnose.
@@ -67,8 +69,8 @@
 * **ofile02-formatted-field-df:** merged field data with formatting errors from database corrected/nullified.
 * **ofile03-data-formatting-error-log:** a record of data points nullified due to formatting errors. Also records the reason each data point was nullified.
 * **ofile04-sbfile:** field data formatted in seabass style formatting so that the field data can be input into script 05 to find matching satellite granules.
-* **ofile05a-full-granules-with-location:** csv containing satellite L1a granule urls matched to field ids. Later fed as input to 04b-editurls.py.
-* **ofile05b-full-granules:** version of 05a, containing satellite L2 granule urls matched to field ids. Later fed into 06-matchup_readGranLinks to match each field data point with its corresponding satellite data.
+* **ofile05a-full-granules-with-location:** csv containing satellite L2 granule urls matched to field ids. Later fed as input to 04b-editurls.py.
+* **ofile05b-full-granules:** version of 05a, containing satellite L1a granule urls matched to field ids. Later fed into 06-matchup_readGranLinks to match each field data point with its corresponding satellite data.
 * **ofile06-unique-granules:** version of 05b, containing only the unique subset of L2 granules. Fed into 05-satproc_intialize to download unique granules.
 * **ofile07-excluded-matchup-log:** record of matchups that were excluded due to file import errors or due to matchups being greater than 1km away from the corresponding field data point.
 * **ofile08-matchup-df:** csv of merged field and satellite data.
@@ -109,7 +111,7 @@ Note that CMR only contains L2 files. We use this script to find the L2 file gra
 
 **04b-editurls.py:** This script edits the L2 file names (specifically the extensions) recorded from find_matchup.py, and edits them to have L1a file extensions.
 
-**05-satproc_initialize.sh:** This script reads in a text file with seawifs, modis, and viirs download urls.  It calls on one of three satellite-specific processing scripts that download the satellite granules via wget into a specific satellite directory structure. A par file is required that specifies which products to download, at which resolution.  This script is also set up to download sst if specified. Thus the script requires two par files: one including sst, one excluding sst. Furthermore, the script requires a cookies file containing the user's earth data login credentials. See _____________ for more information on setting up this cookie file. This script also forks the workflow so that multiple satellite files can be downloaded at once. 
+**05-satproc_initialize.sh:** This script reads in a text file with seawifs, modis, and viirs download urls.  It calls on one of three satellite-specific processing scripts that download the satellite granules via wget into a specific satellite directory structure. A par file is required that specifies which products to download, at which resolution.  This script is also set up to download sst if specified. Thus the script requires two par files: one including sst, one excluding sst. Furthermore, the script requires a cookies file containing the user's earth data login credentials. See /matchup-workflow/setup/Charlie-Guide.md for more information on setting up this cookie file. This script also forks the workflow so that multiple satellite files can be downloaded at once. 
 
 **05a-modis-workflow.sh:**
 
