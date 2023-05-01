@@ -26,7 +26,7 @@ do
 done
 
 
-for sensor in modisa modist viirsn seawifs
+for sensor in modisa modist viirsn seawifs viirsj1 #srp edited this lin 08/01/2022. It has not been tested yet. Simply included viirsj1 in list of satellites.
 do
     python $scriptPath/04a-find_matchup.py --sat $sensor --seabass_file $sbFile \
     --output_file $fullGranLoc --data_type oc --max_time_diff 6 --verbose
