@@ -2,34 +2,7 @@
 # coding: utf-8
 
 """
-A script to perform searches of the EarthData Common Metadata Repository (CMR)
-for satellite granule names and download links.
-written by J.Scott on 2016/12/12 (joel.scott@nasa.gov)
-Modified by Inia Soto on 2020/08/17 (inia.m.sotoramos@nasa.gov)
-Replaced wget function with python requests
-Modified by Cath Mitchell on 2022/01/20 (cmitchell@bigelow.org)
-1) added an input argument to save the found granule links to
-2) made two new functions `processandtrack_CMRreq` and `printtofile_CMRreq` 
-which are slightly adapted versions of `process_CMRreq` and `print_CMRreq`
-to connect granules to each row of the input sb file
-3) modified 3 lines of code to call those new functions and include the
-station in the for loop over the sb file. MUST INCLUDE A COLUMN IN THE 
-sb FILE THAT IS CALLED station
-Note that this edit likely will cause problems for the case where a sb file
-AND lats and lons are provided at the command line as inputs 
-(e.g. with `--elat`, etc), but I don't imagine that I will ever want to 
-do that, and if I do, I'll just use the NASA version of the script, rather
-than my modified one. I just wanted to make the minimal amount of edits to 
-the `find_matchup.py` file, rather than slim it down to only the essentials 
-for my usage, so if there are updates to the file by NASA in the future, 
-then it's not as big a rewrite for me.
-Modified by Sunny Pinkham on 2022/07/01:
-1) Modified dict_plat structure.  dict_plat['platform'] now contains a list, 
-rather than a single value (even if it is a list of only 1 element long).  
-This was necessary for the VIIRS workflow. Prior to 2018, in CMR, the VIIRS
-platform is tagged as 'NPP'. Post January 2018, VIIRS platform is tagged as 
-'Suomi-NPP'.  It is necessary to include both platforms in order to attain 
-Viirs matchups across 2017/2018. 
+This script performs searches of the CMR for satellite granule names and download links. Originally written by J.Scott on 2016/12/12, then modified by Inia Soto, Catherine Mitchell, and Sunny Pinkham.  The original script has been heavily modified to suit current purposes and procedures, including updates to include satellites launched after the original script was written. Returns granules names for granules containing field data location, which defaults to within a +-3 hour (6 hour total) time window. 
 """
 
 def main():
@@ -42,36 +15,9 @@ def main():
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,description='''\
       This program perform searches of the EarthData Search (https://search.earthdata.nasa.gov/search) Common Metadata
-      Repository (CMR) for satellite granule names given an OB.DAAC satellite/instrument and lat/lon/time point or range.
-      
-      Outputs:
-         1) a list of OB.DAAC L2 satellite file granule names that contain the input criteria, per the CMR's records.
-         2) a list of public download links to fetch the matching satellite file granules, per the CMR's records.
-      
-      Inputs:
-        The argument-list is a set of --keyword value pairs.
-      Example usage calls:
-         fd_matchup.py --sat=modist --slat=23.0 --slon=170.0 --stime=2015-11-16T09:00:00Z --max_time_diff=8
-         fd_matchup.py --sat=modist --stime=2015-11-15T09:00:00Z --etime=2015-11-17T09:00:00Z --slat=23.0 --elat=25.0 --slon=170.0 --elon=175.0
-         fd_matchup.py --sat=modist --max_time_diff=4 --seabass_file=[your SB file name].sb
-         fd_matchup.py --sat=modist --slat=23.0 --slon=170.0 --stime=2015-11-16T09:00:00Z --max_time_diff=8 --get_data=[Your path]
-      Caveats:
-        * This script is designed to work with files that have been properly
-          formatted according to SeaBASS guidelines (i.e. Files that passed FCHECK).
-          Some error checking is performed, but improperly formatted input files
-          could cause this script to error or behave unexpectedly. Files
-          downloaded from the SeaBASS database should already be properly formatted, 
-          however, please email seabass@seabass.gsfc.nasa.gov and/or the contact listed
-          in the metadata header if you identify problems with specific files.
-        * It is always HIGHLY recommended that you check for and read any metadata
-          header comments and/or documentation accompanying data files. Information 
-          from those sources could impact your analysis.
-        * Compatibility: This script was developed for Python 3.5.
-        * Requires a valid .netrc file in the user home ($HOME), e.g.:
-          machine urs.earthdata.nasa.gov login USERNAME password PASSWD
-      ''',add_help=True)
+      Repository (CMR) for satellite granule names given an OB.DAAC satellite/instrument and lat/lon/time point or range.''',add_help=True)
 
-    parser.add_argument('--sat', nargs=1, required=True, type=str, choices=['modisa','modist','viirsn','viirsj1','goci','meris','czcs','octs','seawifs'], help='''\
+    parser.add_argument('--sat', nargs=1, required=True, type=str, choices=['modisa','modist','viirsn','viirsj1','viirsj2','goci','meris','czcs','octs','seawifs'], help='''\
       String specifier for satellite platform/instrument
       
       Valid options are:
@@ -80,6 +26,7 @@ def main():
       modist  = MODIS on TERRA
       viirsn  = VIIRS on Suomi-NPP
       viirsj1 = VIIRS on JPSS-1/NOAA-20
+      viirsj2 = VIIRS on JPSS-2/NOAA-21
       meris   = MERIS on ENVISAT
       goci    = GOCI on COMS
       czcs    = CZCS on Nimbus-7
@@ -102,16 +49,15 @@ def main():
       Maximum time difference between satellite and in situ point
       OPTIONAL: default value +/-3 hours
       Valid values: decimal number of hours (0-36)
-      Use with --seabass_file OR --stime
       '''))
 
     parser.add_argument('--seabass_file', nargs='+', type=argparse.FileType('r'), help='''\
-      Valid SeaBASS file name or list of file names
+      Valid SeaBASS file name.
       File must contain latitude, longitude, and date-time information as fields.
       ''')
     
     parser.add_argument('--includeGnatsCheck', default=0, nargs=1, type=int, required=True, help=('''\
-      Input either 0 or 1. Default is zero.  If set to 1, include a check for Gnats data in order to specify a Gulf or Maine bounding box. If ID starts with 's', is considered GNATS as defined by function isGnats.
+      Input either 0 or 1. Default is zero.  If set to 1, include a check for Gulf of Maine North Atlantic Time Series (GNATS) data in order to specify a Gulf of Maine specific bounding box. If ID starts with 's', the record is considered GNATS data as defined by function isGnats.
       '''))
 
     parser.add_argument('--verbose', default=False, action='store_true', help=('''\
@@ -119,7 +65,7 @@ def main():
       '''))
     
     parser.add_argument('--output_file', nargs=1, type=str, help='''\
-      A file name to save granule links to.
+      A file name to save the L2 granule links to.
       ''')
 
     
@@ -131,6 +77,7 @@ def main():
     dict_plat['modist']  = ['MODIS',['TERRA'],'MODIST_L2_']
     dict_plat['viirsn']  = ['VIIRS',['Suomi-NPP','NPP'],'VIIRSN_L2_']
     dict_plat['viirsj1'] = ['VIIRS',['NOAA-20'],'VIIRSJ1_L2_']
+    dict_plat['viirsj2'] = ['VIIRS',['NOAA-21'],'VIIRSJ2_L2_']
     dict_plat['meris']   = ['MERIS',['ENVISAT'],'MERIS_L2_']
     dict_plat['goci']    = ['GOCI',['COMS'],'GOCI_L2_']
     dict_plat['czcs']    = ['CZCS',['Nimbus-7'],'CZCS_L2_']
@@ -167,7 +114,7 @@ def main():
         rowinfo = OrderedDict()
         hits = 0
 
-        ### Set bounding box for downloading L2 files. ######################################################################
+        ### Set bounding box for downloading L2 files. ###
         # Define bounding box as +- 1 degree latitude and longitude from the field coordinates in the SeaBASS file.
         for lat,lon,dt,station in zip(ds.lat,ds.lon,ds.datetime,ds.data['station']):
             
@@ -200,10 +147,10 @@ def main():
                 else:
                     nlat = lat + 1
 
-            ### Specify time limits for search: ###################################################################
-            tim_min = dt + timedelta(hours=twin_Hmin,minutes=twin_Mmin) #use as: tim_min.strftime('%Y-%m-%dT%H:%M:%SZ')
-            tim_max = dt + timedelta(hours=twin_Hmax,minutes=twin_Mmax) #use as: tim_max.strftime('%Y-%m-%dT%H:%M:%SZ')
-
+            ### Specify time limits for search: ###
+            tim_min = dt + timedelta(hours=twin_Hmin,minutes=twin_Mmin)
+            tim_max = dt + timedelta(hours=twin_Hmax,minutes=twin_Mmax)
+            
             # For the input satellite, construct a search url based on lat, lon, and time parameters:
             platform = ''
             for entry in dict_plat[sat][1]:
@@ -222,7 +169,7 @@ def main():
             if dict_args['verbose']:
                 print(url)
 
-            # The following function sends the url to CMR and returns json formatted search query.
+            # The following function sends the url to CMR and returns a json formatted search query.
             content = send_CMRreq(url)
 
             # The following function submits the json query and outputs granule links to matched up satellite files.

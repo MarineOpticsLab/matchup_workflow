@@ -4,7 +4,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='''\
-    This script takes in a field dataframe, containing an id field, and creates a SeaBASS formatted file containing station info: datetime, latitude, longitude, station.''')
+    This script takes in a field datafile, containing an id field/column, and creates a SeaBASS formatted file containing the following station info: datetime, station/id, longitude, latitude.''')
     
     parser.add_argument('--fieldFile', nargs=1, type=str, required=True, help='''\
    Full path, filename, and extension of the field data, which must contain an id field.''')
